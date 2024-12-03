@@ -1,0 +1,222 @@
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import javax.swing.*;
+
+class Book {
+    private static int bookCounter = 1;
+    private int bookNumber;
+    private String title;
+    private String author;
+    private String genre;
+    private double price;
+    private int stock;
+
+    public Book(String title, String author, String genre, double price, int stock) {
+        this.bookNumber = bookCounter++;
+        this.title = title;
+        this.author = author;
+        this.genre = genre;
+        this.price = price;
+        this.stock = stock;
+    }
+
+    public int getBookNumber() {
+        return bookNumber;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public String getGenre() {
+        return genre;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public int getStock() {
+        return stock;
+    }
+
+    public void reduceStock(int quantity) {
+        this.stock -= quantity;
+    }
+
+    @Override
+    public String toString() {
+        return "Book Number: " + bookNumber + ", Title: " + title + ", Author: " + author +
+                ", Genre: " + genre + ", Price: $" + price + ", Stock: " + stock;
+    }
+}
+
+class BookStore {
+    private ArrayList<Book> inventory;
+
+    public BookStore() {
+        inventory = new ArrayList<>();
+    }
+
+    public void addBook(Book book) {
+        inventory.add(book);
+    }
+
+    public ArrayList<Book> getInventory() {
+        return inventory;
+    }
+
+    public ArrayList<Book> searchBooks(String genre, String author) {
+        ArrayList<Book> results = new ArrayList<>();
+        for (Book book : inventory) {
+            if (book.getGenre().equalsIgnoreCase(genre) || book.getAuthor().equalsIgnoreCase(author)) {
+                results.add(book);
+            }
+        }
+        return results;
+    }
+
+    public Book getBookByNumber(int bookNumber) {
+        for (Book book : inventory) {
+            if (book.getBookNumber() == bookNumber) {
+                return book;
+            }
+        }
+        return null;
+    }
+}
+
+public class BookStoreApp extends JFrame implements ActionListener {
+    private BookStore store;
+    private ArrayList<Book> cart;
+    private double totalCost;
+    private JTextArea displayArea;
+    private JTextField genreField, authorField;
+
+    public BookStoreApp() {
+        store = new BookStore();
+        cart = new ArrayList<>();
+        totalCost = 0;
+
+        store.addBook(new Book("Harry Potter and the Philosopher's Stone", "J.K. Rowling", "Fantasy", 20.99, 10));
+        store.addBook(new Book("The Great Gatsby", "F. Scott Fitzgerald", "Classic", 14.99, 8));
+        store.addBook(new Book("Pride and Prejudice", "Jane Austen", "Romance", 12.49, 7));
+        store.addBook(new Book("The Hobbit", "J.R.R. Tolkien", "Adventure", 18.99, 5));
+        store.addBook(new Book("To Kill a Mockingbird", "Harper Lee", "Drama", 15.99, 6));
+
+        setTitle("Online Bookstore");
+        setSize(500, 500);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new FlowLayout());
+
+        JButton listBooksButton = new JButton("List Books");
+        listBooksButton.addActionListener(this);
+
+        JButton searchBooksButton = new JButton("Search Books");
+        searchBooksButton.addActionListener(this);
+
+        JButton viewCartButton = new JButton("View Cart");
+        viewCartButton.addActionListener(this);
+
+        JButton checkoutButton = new JButton("Checkout");
+        checkoutButton.addActionListener(this);
+
+        displayArea = new JTextArea(20, 40);
+        displayArea.setEditable(false);
+
+        genreField = new JTextField(10);
+        authorField = new JTextField(10);
+
+        add(listBooksButton);
+        add(searchBooksButton);
+        add(viewCartButton);
+        add(checkoutButton);
+        add(new JLabel("Genre:"));
+        add(genreField);
+        add(new JLabel("Author:"));
+        add(authorField);
+        add(new JScrollPane(displayArea));
+
+        setVisible(true);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        String command = e.getActionCommand();
+        if (command.equals("List Books")) {
+            displayArea.setText("");
+            for (Book book : store.getInventory()) {
+                displayArea.append(book.toString() + "\n");
+            }
+        } else if (command.equals("Search Books")) {
+            String genre = genreField.getText();
+            String author = authorField.getText();
+            ArrayList<Book> results = store.searchBooks(genre, author);
+            displayArea.setText("");
+            if (results.isEmpty()) {
+                displayArea.append("No books found.\n");
+            } else {
+                for (Book book : results) {
+                    displayArea.append(book.toString() + "\n");
+                }
+                try {
+                    int bookNumber = Integer.parseInt(JOptionPane.showInputDialog(this, "Enter book number to add to cart:"));
+                    int quantity = Integer.parseInt(JOptionPane.showInputDialog(this, "Enter quantity:"));
+                    Book selectedBook = store.getBookByNumber(bookNumber);
+                    if (selectedBook != null) {
+                        if (selectedBook.getStock() >= quantity) {
+                            selectedBook.reduceStock(quantity);
+                            Book bookToAdd = new Book(selectedBook.getTitle(), selectedBook.getAuthor(),
+                                    selectedBook.getGenre(), selectedBook.getPrice(), quantity);
+                            cart.add(bookToAdd);
+                            totalCost += selectedBook.getPrice() * quantity;
+                            displayArea.setText("Book added to cart.\n");
+                        } else {
+                            displayArea.setText("Insufficient stock.\n");
+                        }
+                    } else {
+                        displayArea.setText("Invalid book number.\n");
+                    }
+                } catch (NumberFormatException ex) {
+                    displayArea.setText("Invalid input.\n");
+                }
+            }
+        } else if (command.equals("View Cart")) {
+            displayArea.setText("Your cart:\n");
+            for (Book book : cart) {
+                displayArea.append(book.toString() + "\n");
+            }
+            displayArea.append("Total Cost: $" + totalCost + "\n");
+        } else if (command.equals("Checkout")) {
+            if (cart.isEmpty()) {
+                displayArea.setText("Your cart is empty.\n");
+            } else {
+                displayArea.setText("Select payment method:\n");
+                String[] options = {"Online", "UPI", "Cash on Delivery"};
+                int paymentChoice = JOptionPane.showOptionDialog(this, "Select Payment Method",
+                        "Payment Options", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
+                if (paymentChoice >= 0) {
+                    String address = JOptionPane.showInputDialog(this, "Enter your address:");
+                    displayArea.append("Order placed successfully!\n");
+                    displayArea.append("Total Cost: $" + totalCost + "\n");
+                    displayArea.append("Delivery date: In 7 days\n");
+                    displayArea.append("Delivery address: " + address + "\n");
+                    displayArea.append("Payment Method: " + options[paymentChoice] + "\n");
+                    cart.clear();
+                    totalCost = 0;
+                } else {
+                    displayArea.append("Checkout canceled.\n");
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        new BookStoreApp();
+    }
+}
